@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Minhas Tarefas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-container">
+    <div class="card">
+      <!-- Cabeçalho com ícone e contador -->
+      <header class="header">
+        <div class="logo">📋</div>
+        <div>
+          <h1 class="title">Minhas Tarefas</h1>
+          <p id="activeText" class="subtitle" aria-live="polite" aria-atomic="true">Nenhuma tarefa pendente 🎉</p>
+        </div>
+      </header>
+
+      <!-- Formulário de input -->
+      <form id="todoForm" class="input-row" autocomplete="off">
+        <input id="todoInput" type="text" placeholder="O que você precisa fazer?" aria-label="Nova tarefa" />
+        <button type="submit" title="Adicionar" aria-label="Adicionar tarefa">➕</button>
+      </form>
+
+      <!-- Filtros e ações -->
+      <div class="toolbar">
+        <div class="filters" role="tablist" aria-label="Filtros de tarefas">
+          <button data-filter="all" class="filter-btn active" type="button">Todas</button>
+          <button data-filter="active" class="filter-btn" type="button">Pendentes</button>
+          <button data-filter="done" class="filter-btn" type="button">Feitas</button>
+        </div>
+        <div class="actions">
+          <button id="markAllBtn" type="button" class="ghost" aria-label="Marcar todas como concluídas">Marcar todas</button>
+          <button id="clearCompletedBtn" type="button" class="ghost" aria-label="Limpar concluídas">Limpar concluídas</button>
+        </div>
+      </div>
+
+      <!-- Lista de tarefas -->
+      <section id="todoList" class="list" aria-live="polite" aria-atomic="true"></section>
+      <footer class="footer">Feito com ♥ — mantenha seu dia organizado</footer>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
