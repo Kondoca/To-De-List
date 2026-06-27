@@ -1,55 +1,55 @@
 {
-  "timestamp": "2026-06-27T20:57:10.463Z",
+  "timestamp": "2026-06-27T21:18:27.985Z",
   "mode": "headless",
   "workerType": "audit",
   "model": "haiku",
-  "durationMs": 31887,
-  "executionId": "audit_1782593798576_kwapbl",
+  "durationMs": 41395,
+  "executionId": "audit_1782595066590_nb2kv8",
   "success": true,
   "findings": {
     "vulnerabilities": [
       {
-        "severity": "medium",
-        "file": ".claude/helpers/memory.js",
-        "line": 45,
-        "description": "Sensitive data stored in plaintext JSON file without encryption. Any secret values set via memory.set() are persisted unencrypted at .claude-flow/data/memory.json."
-      },
-      {
-        "severity": "medium",
-        "file": ".claude/helpers/session.js",
-        "line": 118,
-        "description": "Session context data stored in plaintext JSON files without encryption. Session state containing potentially sensitive context is written unencrypted to .claude-flow/sessions/"
-      },
-      {
         "severity": "low",
-        "file": ".claude/helpers/memory.js",
-        "line": 37,
-        "description": "No input validation on memory keys. Arbitrary key names could potentially be used for state manipulation, though impact is limited to application-level state."
-      },
-      {
-        "severity": "low",
-        "file": ".claude/helpers/session.js",
-        "line": 111,
-        "description": "No access control on session context values. Any caller can read/write arbitrary session state via update() and get() methods."
+        "file": "app.js",
+        "line": 154,
+        "description": "Use of innerHTML with user-controlled input. While currently limited to emoji literals, innerHTML should be avoided in favor of textContent for consistency and to prevent future XSS risks if logic changes."
       },
       {
         "severity": "low",
         "file": "app.js",
-        "line": 36,
-        "description": "localStorage used without user consent notice. Todo data stored in browser localStorage which is accessible to any JavaScript on the same origin."
+        "line": 172,
+        "description": "User-supplied todo text is interpolated into aria-label attributes without explicit sanitization (e.g., Excluir ${todo.text}). While setAttribute is safer than innerHTML, special characters in todo.text could potentially cause attribute injection. Should use textContent for aria-label or sanitize input."
+      },
+      {
+        "severity": "low",
+        "file": "app.js",
+        "line": 186,
+        "description": "Same as line 172: user-supplied todo text in aria-label template string (Editar tarefa: ${todo.text}) without explicit sanitization."
+      },
+      {
+        "severity": "medium",
+        "file": ".claude/helpers/memory.js",
+        "line": 21,
+        "description": "Non-atomic file writes using writeFileSync. Race condition vulnerability if multiple processes write concurrently; file can be corrupted mid-write. Session.js fixed this with atomic writes (#2307) but memory.js still uses non-atomic approach."
+      },
+      {
+        "severity": "low",
+        "file": "app.js",
+        "line": 25,
+        "description": "No explicit JSON size validation before parsing localStorage data. Malformed or oversized data could cause performance issues, though error handling exists."
       }
     ],
-    "riskScore": 35,
+    "riskScore": 18,
     "recommendations": [
-      "Encrypt sensitive data at rest in memory.js using crypto module (e.g., AES-256-GCM) before writing to .claude-flow/data/memory.json",
-      "Add encryption layer to session.js for storing context data, especially if session context contains authentication tokens or API keys",
-      "Implement access control checks in memory.js: validate key names against a whitelist or prevent sensitive prefixes (e.g., '_secret', 'apiKey', 'password')",
-      "Add documentation to app.js about localStorage security implications and implement user consent if storing sensitive todo data becomes necessary",
-      "Audit all uses of execSync in statusline.js and other helpers: verify they don't accept untrusted input; github-safe.js shows good practice with execFileSync",
-      "No hardcoded secrets detected, no SQL injection risk (no database), no XSS vulnerabilities in provided code—focus remediation on data storage encryption",
-      "Consider adding file permission checks to ensure .claude-flow/ and .claude-flow/sessions directories are readable only by the current user (chmod 700)"
+      "Replace innerHTML usage (app.js:154) with textContent: `checkBtn.textContent = todo.completed ? '✅' : '';`",
+      "Sanitize or validate aria-label attributes by using textContent assignment instead of setAttribute with template strings, or implement a helper function that escapes special characters",
+      "Implement atomic writes in memory.js similar to session.js using temp file + rename pattern to prevent data corruption under concurrent writes",
+      "Add explicit input length validation for todo text (e.g., max 1000 chars) to prevent localStorage quota exhaustion",
+      "Consider adding Content-Security-Policy headers if this is served over HTTP/HTTPS",
+      "Add input type validation in loadTodos() to verify todo object structure before using them",
+      "Implement localStorage quota checking before saving to handle edge cases gracefully"
     ]
   },
-  "rawOutputPreview": "```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"medium\",\n      \"file\": \".claude/helpers/memory.js\",\n      \"line\": 45,\n      \"description\": \"Sensitive data stored in plaintext JSON file without encryption. Any secret values set via memory.set() are persisted unencrypted at .claude-flow/data/memory.json.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \".claude/helpers/session.js\",\n      \"line\": 118,\n      \"description\": \"Session context data stored in plaintext JSON files without encryption. Session state containing potentially sensitive context is written unencrypted to .claude-flow/sessions/\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \".claude/helpers/memory.js\",\n      \"line\": 37,\n      \"description\": \"No input validation on memory keys. Arbitrary key names could potentially be used for state manipulation, though impact is limited to application-level state.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \".claude/helpers/session.js\",\n      \"line\": 111,\n      \"description\": \"No access control on session context values. Any caller can read/write arbitrary session state via update() and get() methods.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app.js\",\n      \"line\": 36,\n      \"description\": \"localStorage used without user consent notice. Todo data stored in browser localStorage which is accessible to any JavaScript on the same origin.\"\n    }\n  ],\n  \"riskScore\": 35,\n  \"recommendations\": [\n    \"Encrypt sensitive data at rest in memory.js using crypto module (e.g., AES-256-GCM) before writing to .claude-flow/data/memory.json\",\n    \"Add encryption layer to session.js for storing context data, especially if session context contains authentication tokens or API keys\",\n    \"Implement access control checks in memory.js: validate key names against a whitelist or prevent sensitive prefixes (e.g., '_secret', 'apiKey', 'password')\",\n    \"Add documentation to app.js about localStorage security implications and implement user consent if st",
-  "rawOutputLength": 3025
+  "rawOutputPreview": "Based on my analysis of the codebase, here's the security audit report:\n\n```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"low\",\n      \"file\": \"app.js\",\n      \"line\": 154,\n      \"description\": \"Use of innerHTML with user-controlled input. While currently limited to emoji literals, innerHTML should be avoided in favor of textContent for consistency and to prevent future XSS risks if logic changes.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app.js\",\n      \"line\": 172,\n      \"description\": \"User-supplied todo text is interpolated into aria-label attributes without explicit sanitization (e.g., Excluir ${todo.text}). While setAttribute is safer than innerHTML, special characters in todo.text could potentially cause attribute injection. Should use textContent for aria-label or sanitize input.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app.js\",\n      \"line\": 186,\n      \"description\": \"Same as line 172: user-supplied todo text in aria-label template string (Editar tarefa: ${todo.text}) without explicit sanitization.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \".claude/helpers/memory.js\",\n      \"line\": 21,\n      \"description\": \"Non-atomic file writes using writeFileSync. Race condition vulnerability if multiple processes write concurrently; file can be corrupted mid-write. Session.js fixed this with atomic writes (#2307) but memory.js still uses non-atomic approach.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app.js\",\n      \"line\": 25,\n      \"description\": \"No explicit JSON size validation before parsing localStorage data. Malformed or oversized data could cause performance issues, though error handling exists.\"\n    }\n  ],\n  \"riskScore\": 18,\n  \"recommendations\": [\n    \"Replace innerHTML usage (app.js:154) with textContent: `checkBtn.textContent = todo.completed ? '✅' : '';`\",\n    \"Sanitize or validate aria-label attributes by using textContent assignment instead of setAttribute with template strings, or implement a helper f",
+  "rawOutputLength": 3482
 }
