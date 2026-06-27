@@ -10,7 +10,7 @@
   --destructive: #ef4444;
   --radius: 12px;
   --shadow: 0 6px 20px rgba(2,6,23,0.6);
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --max-width: 720px;
 }
 
 /* Reset simples */
@@ -20,6 +20,7 @@ body{
   margin:0;
   background:linear-gradient(180deg,var(--bg), #071028);
   color:var(--fg);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
 }
@@ -36,7 +37,7 @@ body{
 /* Card principal */
 .card{
   width:100%;
-  max-width:720px;
+  max-width:var(--max-width);
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   border-radius:16px;
   padding:20px;
@@ -71,6 +72,7 @@ body{
 .input-row input{
   flex:1;height:48px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.05);
   background:var(--card);color:var(--fg);outline:none;box-shadow:var(--shadow);
+  font-size:1rem;
   transition:box-shadow .12s ease, transform .12s ease, border-color .12s ease;
 }
 .input-row button{
@@ -117,14 +119,14 @@ body{
 
 .edit-input{
   flex:1;height:40px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);
-  background:rgba(255,255,255,0.05);color:var(--fg);outline:none;
+  background:rgba(255,255,255,0.05);color:var(--fg);outline:none;font-size:1rem;
 }
 .edit-input:focus{border-color:rgba(37,99,235,0.45);box-shadow:0 0 0 3px rgba(37,99,235,0.12)}
 
 .todo-item.visible{transform:none;opacity:1}
 
-/* foco acessível */
-button:focus, input:focus{outline:2px solid rgba(37,99,235,0.18);outline-offset:2px}
+/* foco acessível via teclado apenas */
+button:focus-visible, input:focus-visible{outline:2px solid rgba(37,99,235,0.55);outline-offset:2px}
 
 .footer{margin-top:14px;text-align:center;color:var(--muted);font-size:0.85rem}
 

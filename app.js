@@ -83,9 +83,10 @@ function clearCompleted() {
   sync();
 }
 
-function markAllCompleted() {
+function toggleAll() {
   if (state.todos.length === 0) return;
-  state.todos = state.todos.map((todo) => ({ ...todo, completed: true }));
+  const allDone = state.todos.every((todo) => todo.completed);
+  state.todos = state.todos.map((todo) => ({ ...todo, completed: !allDone }));
   sync();
 }
 
@@ -117,7 +118,12 @@ function render() {
     : `${activeCount} tarefa${activeCount > 1 ? "s" : ""} pendente${activeCount > 1 ? "s" : ""}`;
 
   if (refs.clearCompletedBtn) refs.clearCompletedBtn.disabled = completedCount === 0;
-  if (refs.markAllBtn) refs.markAllBtn.disabled = state.todos.length === 0;
+  if (refs.markAllBtn) {
+    const allDone = state.todos.length > 0 && state.todos.every((t) => t.completed);
+    refs.markAllBtn.disabled = state.todos.length === 0;
+    refs.markAllBtn.textContent = allDone ? "Desmarcar todas" : "Marcar todas";
+    refs.markAllBtn.setAttribute("aria-label", allDone ? "Desmarcar todas as tarefas" : "Marcar todas como concluídas");
+  }
 
   refs.todoList.innerHTML = "";
 
@@ -223,7 +229,7 @@ if (refs.clearCompletedBtn) {
 }
 
 if (refs.markAllBtn) {
-  refs.markAllBtn.addEventListener("click", markAllCompleted);
+  refs.markAllBtn.addEventListener("click", toggleAll);
 }
 
 refs.todoInput.addEventListener("keydown", (event) => {

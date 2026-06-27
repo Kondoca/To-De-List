@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-06-27T20:57:10.463Z",
+  "mode": "headless",
+  "workerType": "audit",
+  "model": "haiku",
+  "durationMs": 31887,
+  "executionId": "audit_1782593798576_kwapbl",
+  "success": true,
+  "findings": {
+    "vulnerabilities": [
+      {
+        "severity": "medium",
+        "file": ".claude/helpers/memory.js",
+        "line": 45,
+        "description": "Sensitive data stored in plaintext JSON file without encryption. Any secret values set via memory.set() are persisted unencrypted at .claude-flow/data/memory.json."
+      },
+      {
+        "severity": "medium",
+        "file": ".claude/helpers/session.js",
+        "line": 118,
+        "description": "Session context data stored in plaintext JSON files without encryption. Session state containing potentially sensitive context is written unencrypted to .claude-flow/sessions/"
+      },
+      {
+        "severity": "low",
+        "file": ".claude/helpers/memory.js",
+        "line": 37,
+        "description": "No input validation on memory keys. Arbitrary key names could potentially be used for state manipulation, though impact is limited to application-level state."
+      },
+      {
+        "severity": "low",
+        "file": ".claude/helpers/session.js",
+        "line": 111,
+        "description": "No access control on session context values. Any caller can read/write arbitrary session state via update() and get() methods."
+      },
+      {
+        "severity": "low",
+        "file": "app.js",
+        "line": 36,
+        "description": "localStorage used without user consent notice. Todo data stored in browser localStorage which is accessible to any JavaScript on the same origin."
+      }
+    ],
+    "riskScore": 35,
+    "recommendations": [
+      "Encrypt sensitive data at rest in memory.js using crypto module (e.g., AES-256-GCM) before writing to .claude-flow/data/memory.json",
+      "Add encryption layer to session.js for storing context data, especially if session context contains authentication tokens or API keys",
+      "Implement access control checks in memory.js: validate key names against a whitelist or prevent sensitive prefixes (e.g., '_secret', 'apiKey', 'password')",
+      "Add documentation to app.js about localStorage security implications and implement user consent if storing sensitive todo data becomes necessary",
+      "Audit all uses of execSync in statusline.js and other helpers: verify they don't accept untrusted input; github-safe.js shows good practice with execFileSync",
+      "No hardcoded secrets detected, no SQL injection risk (no database), no XSS vulnerabilities in provided code—focus remediation on data storage encryption",
+      "Consider adding file permission checks to ensure .claude-flow/ and .claude-flow/sessions directories are readable only by the current user (chmod 700)"
+    ]
+  },
+  "rawOutputPreview": "```json\n{\n  \"vulnerabilities\": [\n    {\n      \"severity\": \"medium\",\n      \"file\": \".claude/helpers/memory.js\",\n      \"line\": 45,\n      \"description\": \"Sensitive data stored in plaintext JSON file without encryption. Any secret values set via memory.set() are persisted unencrypted at .claude-flow/data/memory.json.\"\n    },\n    {\n      \"severity\": \"medium\",\n      \"file\": \".claude/helpers/session.js\",\n      \"line\": 118,\n      \"description\": \"Session context data stored in plaintext JSON files without encryption. Session state containing potentially sensitive context is written unencrypted to .claude-flow/sessions/\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \".claude/helpers/memory.js\",\n      \"line\": 37,\n      \"description\": \"No input validation on memory keys. Arbitrary key names could potentially be used for state manipulation, though impact is limited to application-level state.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \".claude/helpers/session.js\",\n      \"line\": 111,\n      \"description\": \"No access control on session context values. Any caller can read/write arbitrary session state via update() and get() methods.\"\n    },\n    {\n      \"severity\": \"low\",\n      \"file\": \"app.js\",\n      \"line\": 36,\n      \"description\": \"localStorage used without user consent notice. Todo data stored in browser localStorage which is accessible to any JavaScript on the same origin.\"\n    }\n  ],\n  \"riskScore\": 35,\n  \"recommendations\": [\n    \"Encrypt sensitive data at rest in memory.js using crypto module (e.g., AES-256-GCM) before writing to .claude-flow/data/memory.json\",\n    \"Add encryption layer to session.js for storing context data, especially if session context contains authentication tokens or API keys\",\n    \"Implement access control checks in memory.js: validate key names against a whitelist or prevent sensitive prefixes (e.g., '_secret', 'apiKey', 'password')\",\n    \"Add documentation to app.js about localStorage security implications and implement user consent if st",
+  "rawOutputLength": 3025
+}

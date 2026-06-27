@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-06-27T20:59:09.795Z",
+  "projectRoot": "C:\\Users\\Willi\\OneDrive\\Documentos\\To-De-List",
+  "structure": {
+    "hasPackageJson": false,
+    "hasTsConfig": false,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1782593949795
+}

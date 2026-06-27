@@ -1,0 +1,80 @@
+{
+  "timestamp": "2026-06-27T20:59:03.449Z",
+  "mode": "headless",
+  "workerType": "testgaps",
+  "model": "sonnet",
+  "durationMs": 112973,
+  "executionId": "testgaps_1782593830476_zbaaqa",
+  "success": true,
+  "findings": {
+    "sections": [
+      {
+        "title": "Test Coverage Analysis — To-Do List App",
+        "content": "\n**Scope:** `app.js` (243 lines) is the only application logic; `index.html`/`styles.css` are markup/style. There is **no test infrastructure at all** — no `package.json`, no test runner, no test files anywhere in the repo. Coverage is effectively **0%**.\n\n",
+        "level": 2
+      },
+      {
+        "title": "Structural blocker (read this before the skeletons)",
+        "content": "\n`app.js` exports nothing — it's a plain script that queries the DOM and wires listeners at top-level, then immediately self-invokes (`loadTodos(); updateFilterButtons(); render();` at line 240-242). Two consequences:\n\n1. **No function is importable**, so true unit tests need either (a) a small refactor adding `export` statements, or (b) black-box integration tests that load `index.html` into jsdom and `require('./app.js')` as a side-effecting script.\n2. Several DOM refs (`todoForm`, `todoInput`, `todoList`, `activeText`) have **no null-guard** before `.addEventListener` (unlike `clearCompletedBtn`/`markAllBtn`, which do check). If the HTML markup ever drifts from these ids, the script throws at load time with no error handling — itself a gap worth a test.\n\nRecommend **Vitest + jsdom** (zero-config, fast, works with plain scripts). I did not create files/configs since this was requested as analysis only — skeletons below assume that setup.\n\n---\n\n",
+        "level": 3
+      },
+      {
+        "title": "1. Untested functions/classes (all 19)",
+        "content": "\n| Function | Risk if broken |\n|---|---|\n| `loadTodos`, `saveTodos` | data loss / silent reset |\n| `createId` | duplicate ids → wrong item edited/deleted |\n| `sync`, `render`, `createTodoItem` | UI desync |\n| `getActiveCount`, `getCompletedCount` | wrong counter/disabled state |\n| `addTodo`, `updateTodo`, `toggleTodo`, `deleteTodo` | core CRUD correctness |\n| `clearCompleted`, `markAllCompleted` | bulk-action correctness |\n| `setFilter`, `filteredTodos`, `updateFilterButtons` | filter UI correctness |\n| `startEdit` | inline-edit correctness |\n| `handleFormSubmit` | form UX |\n\n",
+        "level": 3
+      },
+      {
+        "title": "2. Edge cases not covered",
+        "content": "\n- `loadTodos()`: malformed JSON in localStorage, valid JSON that isn't an array (e.g. `{}`), array of malformed todo objects (missing `id`/`completed`/`text`).\n- `addTodo(\"   \")`: whitespace-only input must be rejected.\n- `updateTodo`/`toggleTodo`/`deleteTodo` called with a **non-existent id**: should no-op, not throw.\n- `clearCompleted()`/`markAllCompleted()` on an **empty list**: must early-return and skip `sync()` (no spurious save/render).\n- `filteredTodos()` with an **unrecognized filter value**: falls through to \"all\" — currently undocumented behavior.\n- `startEdit`: Enter then blur firing in sequence (the `finished` guard should prevent double-save) — and Escape discarding edits, including when the edited value is empty.\n- Cross-tab sync via the `storage` event: should ignore events for unrelated keys.\n\n",
+        "level": 3
+      },
+      {
+        "title": "3. Missing error-handling tests",
+        "content": "\n- `saveTodos()` has **no try/catch** — if `localStorage.setItem` throws (quota exceeded, private-mode Safari, storage disabled), the exception propagates uncaught and the in-memory state and persisted state diverge silently.\n- Missing required DOM elements at script load (id typo in HTML) → unguarded `.addEventListener` throws; no fallback/error message.\n- `loadTodos()`'s catch path only logs a warning — there's no test confirming the app still functions afterward (i.e. `state.todos` resets to `[]` and `render()` doesn't crash).\n\n",
+        "level": 3
+      },
+      {
+        "title": "4. Integration test gaps",
+        "content": "\n- End-to-end flow: type → submit → item appears → check → counts update → delete → empty state message.\n- Filter switching reflecting both the active button style (`updateFilterButtons`) and the rendered list together.\n- Persistence round-trip: add items, reload the \"page\" (re-run `loadTodos()`/`render()`), confirm state survives.\n- Cross-tab sync: dispatch a `storage` event and confirm the UI re-renders from the new localStorage value.\n- Bootstrap-time failure mode (missing DOM nodes) — currently untested entirely.\n\n---\n\n",
+        "level": 3
+      },
+      {
+        "title": "Test skeletons",
+        "content": "**Setup (once, e.g. `tests/setup.js`):**\n```js\nimport { beforeEach } from \"vitest\";\n\nbeforeEach(() => {\n  document.body.innerHTML = `\n    <form id=\"todoForm\"><input id=\"todoInput\" /></form>\n    <p id=\"activeText\"></p>\n    <section id=\"todoList\"></section>\n    <button class=\"filter-btn active\" data-filter=\"all\"></button>\n    <button class=\"filter-btn\" data-filter=\"active\"></button>\n    <button class=\"filter-btn\" data-filter=\"done\"></button>\n    <button id=\"clearCompletedBtn\"></button>\n    <button id=\"markAllBtn\"></button>\n  `;\n  localStorage.clear();\n  vi.resetModules(); // re-run app.js bootstrap fresh each test\n});\n```\n\n**CRUD + persistence (`tests/todo-crud.test.js`):**\n```js\nimport { describe, it, expect, vi } from \"vitest\";\n\ndescribe(\"addTodo / toggleTodo / deleteTodo\", () => {\n  it(\"ignores whitespace-only input\", async () => {\n    await import(\"../app.js\");\n    document.getElementById(\"todoInput\").value = \"   \";\n    document.getElementById(\"todoForm\").dispatchEvent(new Event(\"submit\", { bubbles: true, cancelable: true }));\n    expect(document.querySelectorAll(\".todo-item\").length).toBe(0);\n  });\n\n  it(\"toggleTodo/deleteTodo on a non-existent id is a no-op\", async () => {\n    const mod = await import(\"../app.js\");\n    // requires exporting toggleTodo/deleteTodo, or drive via DOM as below\n  });\n});\n```\n\n**Error handling — storage failure (`tests/storage-errors.test.js`):**\n```js\nimport { describe, it, expect, vi } from \"vitest\";\n\nit(\"surfaces or survives a localStorage.setItem failure\", async () => {\n  vi.spyOn(Storage.prototype, \"setItem\").mockImplementation(() => {\n    throw new DOMException(\"QuotaExceededError\");\n  });\n  await import(\"../app.js\");\n  document.getElementById(\"todoInput\").value = \"buy milk\";\n  expect(() =>\n    document.getElementById(\"todoForm\").dispatchEvent(new Event(\"submit\", { bubbles: true, cancelable: true }))\n  ).not.toThrow(); // currently WILL throw — documents the gap\n});\n\nit(\"recovers from corrupted localStorage JSON\", async () => {\n  localStorage.setItem(\"simple_todos_v1\", \"{not valid json\");\n  const warn = vi.spyOn(console, \"warn\").mockImplementation(() => {});\n  await import(\"../app.js\");\n  expect(document.querySelector(\".empty\")).not.toBeNull();\n  warn.mockRestore();\n});\n```\n\n**Filter edge case (`tests/filter.test.js`):**\n```js\nit(\"falls back to showing all todos for an unrecognized filter\", async () => {\n  await import(\"../app.js\");\n  // seed two todos via the form, then manually set an invalid filter\n  // and call the (currently unexported) setFilter — requires export to unit test directly,\n  // or simulate by dispatching click on a button with a bogus data-filter value.\n});\n```\n\n**Inline edit (`tests/edit.test.js`):**\n```js\nit(\"Enter-then-blur does not double-save (finished guard)\", async () => {\n  await import(\"../app.js\");\n  // add a todo, dblclick its text to enter edit mode\n  const text = document.querySelector(\".todo-text\");\n  text.dispatchEvent(new MouseEvent(\"dblclick\", { bubbles: true }));\n  const input = document.querySelector(\".edit-input\");\n  input.value = \"updated\";\n  input.dispatchEvent(new KeyboardEvent(\"keydown\", { key: \"Enter\" }));\n  input.dispatchEvent(new Event(\"blur\"));\n  expect(document.querySelectorAll(\".todo-text\").length).toBe(1); // not duplicated/corrupted\n});\n\nit(\"Escape discards the edit\", async () => { /* same setup, key: Escape, assert original text retained */ });\n```\n\n**Integration — bootstrap failure (`tests/bootstrap.test.js`):**\n```js\nit(\"throws clearly (or should gracefully no-op) when required DOM nodes are missing\", async () => {\n  document.body.innerHTML = \"\"; // no #todoForm etc.\n  await expect(import(\"../app.js\")).rejects.toThrow(); // documents current unguarded behavior\n});\n```\n\n**Integration — cross-tab sync (`tests/cross-tab.test.js`):**\n```js\nit(\"re-renders when a storage event fires for the todos key\", async () => {\n  await import(\"../app.js\");\n  localStorage.setItem(\"simple_todos_v1\", JSON.stringify([{ id: \"1\", text: \"external\", completed: false }]));\n  window.dispatchEvent(new StorageEvent(\"storage\", { key: \"simple_todos_v1\" }));\n  expect(document.body.textContent).toContain(\"external\");\n});\n```\n\n---\n\n**Recommendation:** the highest-leverage fix isn't writing more skeletons — it's adding `export` to the pure logic functions (`addTodo`, `toggleTodo`, `deleteTodo`, `filteredTodos`, `getActiveCount`, etc.) so they can be unit-tested directly instead of only through DOM event simulation. Want me to do that refactor and scaffold the actual Vitest config/test files, or keep this as analysis only?",
+        "level": 3
+      }
+    ],
+    "codeBlocks": [
+      {
+        "language": "js",
+        "code": "import { beforeEach } from \"vitest\";\n\nbeforeEach(() => {\n  document.body.innerHTML = `\n    <form id=\"todoForm\"><input id=\"todoInput\" /></form>\n    <p id=\"activeText\"></p>\n    <section id=\"todoList\"></section>\n    <button class=\"filter-btn active\" data-filter=\"all\"></button>\n    <button class=\"filter-btn\" data-filter=\"active\"></button>\n    <button class=\"filter-btn\" data-filter=\"done\"></button>\n    <button id=\"clearCompletedBtn\"></button>\n    <button id=\"markAllBtn\"></button>\n  `;\n  localStorage.clear();\n  vi.resetModules(); // re-run app.js bootstrap fresh each test\n});"
+      },
+      {
+        "language": "js",
+        "code": "import { describe, it, expect, vi } from \"vitest\";\n\ndescribe(\"addTodo / toggleTodo / deleteTodo\", () => {\n  it(\"ignores whitespace-only input\", async () => {\n    await import(\"../app.js\");\n    document.getElementById(\"todoInput\").value = \"   \";\n    document.getElementById(\"todoForm\").dispatchEvent(new Event(\"submit\", { bubbles: true, cancelable: true }));\n    expect(document.querySelectorAll(\".todo-item\").length).toBe(0);\n  });\n\n  it(\"toggleTodo/deleteTodo on a non-existent id is a no-op\", async () => {\n    const mod = await import(\"../app.js\");\n    // requires exporting toggleTodo/deleteTodo, or drive via DOM as below\n  });\n});"
+      },
+      {
+        "language": "js",
+        "code": "import { describe, it, expect, vi } from \"vitest\";\n\nit(\"surfaces or survives a localStorage.setItem failure\", async () => {\n  vi.spyOn(Storage.prototype, \"setItem\").mockImplementation(() => {\n    throw new DOMException(\"QuotaExceededError\");\n  });\n  await import(\"../app.js\");\n  document.getElementById(\"todoInput\").value = \"buy milk\";\n  expect(() =>\n    document.getElementById(\"todoForm\").dispatchEvent(new Event(\"submit\", { bubbles: true, cancelable: true }))\n  ).not.toThrow(); // currently WILL throw — documents the gap\n});\n\nit(\"recovers from corrupted localStorage JSON\", async () => {\n  localStorage.setItem(\"simple_todos_v1\", \"{not valid json\");\n  const warn = vi.spyOn(console, \"warn\").mockImplementation(() => {});\n  await import(\"../app.js\");\n  expect(document.querySelector(\".empty\")).not.toBeNull();\n  warn.mockRestore();\n});"
+      },
+      {
+        "language": "js",
+        "code": "it(\"falls back to showing all todos for an unrecognized filter\", async () => {\n  await import(\"../app.js\");\n  // seed two todos via the form, then manually set an invalid filter\n  // and call the (currently unexported) setFilter — requires export to unit test directly,\n  // or simulate by dispatching click on a button with a bogus data-filter value.\n});"
+      },
+      {
+        "language": "js",
+        "code": "it(\"Enter-then-blur does not double-save (finished guard)\", async () => {\n  await import(\"../app.js\");\n  // add a todo, dblclick its text to enter edit mode\n  const text = document.querySelector(\".todo-text\");\n  text.dispatchEvent(new MouseEvent(\"dblclick\", { bubbles: true }));\n  const input = document.querySelector(\".edit-input\");\n  input.value = \"updated\";\n  input.dispatchEvent(new KeyboardEvent(\"keydown\", { key: \"Enter\" }));\n  input.dispatchEvent(new Event(\"blur\"));\n  expect(document.querySelectorAll(\".todo-text\").length).toBe(1); // not duplicated/corrupted\n});\n\nit(\"Escape discards the edit\", async () => { /* same setup, key: Escape, assert original text retained */ });"
+      },
+      {
+        "language": "js",
+        "code": "it(\"throws clearly (or should gracefully no-op) when required DOM nodes are missing\", async () => {\n  document.body.innerHTML = \"\"; // no #todoForm etc.\n  await expect(import(\"../app.js\")).rejects.toThrow(); // documents current unguarded behavior\n});"
+      },
+      {
+        "language": "js",
+        "code": "it(\"re-renders when a storage event fires for the todos key\", async () => {\n  await import(\"../app.js\");\n  localStorage.setItem(\"simple_todos_v1\", JSON.stringify([{ id: \"1\", text: \"external\", completed: false }]));\n  window.dispatchEvent(new StorageEvent(\"storage\", { key: \"simple_todos_v1\" }));\n  expect(document.body.textContent).toContain(\"external\");\n});"
+      }
+    ]
+  },
+  "rawOutputPreview": "## Test Coverage Analysis — To-Do List App\n\n**Scope:** `app.js` (243 lines) is the only application logic; `index.html`/`styles.css` are markup/style. There is **no test infrastructure at all** — no `package.json`, no test runner, no test files anywhere in the repo. Coverage is effectively **0%**.\n\n### Structural blocker (read this before the skeletons)\n\n`app.js` exports nothing — it's a plain script that queries the DOM and wires listeners at top-level, then immediately self-invokes (`loadTodos(); updateFilterButtons(); render();` at line 240-242). Two consequences:\n\n1. **No function is importable**, so true unit tests need either (a) a small refactor adding `export` statements, or (b) black-box integration tests that load `index.html` into jsdom and `require('./app.js')` as a side-effecting script.\n2. Several DOM refs (`todoForm`, `todoInput`, `todoList`, `activeText`) have **no null-guard** before `.addEventListener` (unlike `clearCompletedBtn`/`markAllBtn`, which do check). If the HTML markup ever drifts from these ids, the script throws at load time with no error handling — itself a gap worth a test.\n\nRecommend **Vitest + jsdom** (zero-config, fast, works with plain scripts). I did not create files/configs since this was requested as analysis only — skeletons below assume that setup.\n\n---\n\n### 1. Untested functions/classes (all 19)\n\n| Function | Risk if broken |\n|---|---|\n| `loadTodos`, `saveTodos` | data loss / silent reset |\n| `createId` | duplicate ids → wrong item edited/deleted |\n| `sync`, `render`, `createTodoItem` | UI desync |\n| `getActiveCount`, `getCompletedCount` | wrong counter/disabled state |\n| `addTodo`, `updateTodo`, `toggleTodo`, `deleteTodo` | core CRUD correctness |\n| `clearCompleted`, `markAllCompleted` | bulk-action correctness |\n| `setFilter`, `filteredTodos`, `updateFilterButtons` | filter UI correctness |\n| `startEdit` | inline-edit correctness |\n| `handleFormSubmit` | form UX |\n\n### 2. Edge cases not covered\n\n- `loadTodos()`: malformed ",
+  "rawOutputLength": 8507
+}
