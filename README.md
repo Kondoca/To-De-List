@@ -1,8 +1,10 @@
 # To-De-List
 
-https://kondoca.github.io/To-De-List/
-
 Um aplicativo de lista de tarefas simples e elegante criado com HTML, CSS e JavaScript puro.
+
+![Prévia do To-De-List](docs/preview.jpg)
+
+🌐 **Acesse:** https://kondoca.github.io/To-De-List/
 
 ## Descrição
 
